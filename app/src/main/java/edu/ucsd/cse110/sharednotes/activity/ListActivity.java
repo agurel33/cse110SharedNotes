@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.LiveData;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.DividerItemDecoration;
@@ -34,7 +35,6 @@ import edu.ucsd.cse110.sharednotes.viewmodel.ListViewModel;
  * direct method calls. - The dotted lines represent indirect relationships. - Can indirectly
  * trigger behavior through a callback or observer.
  * <p>
-
  * ──Activity ╶╶(observes events on)╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╮    [Presenter - Behavior]
  *   │                                                    ╎
  *   ├──(calls)────→ Repository ←╶╶╶╶╶╮                   ╎    [Model]
@@ -145,7 +145,12 @@ public class ListActivity extends AppCompatActivity {
 
             // Otherwise, create a new note, persist it...
             var title = input.getText().toString();
-            var note = viewModel.getOrCreateNote(title);
+            LiveData<Note> note = null;
+            try {
+                note = viewModel.getOrCreateNote(title);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             // ...wait for the database to finish persisting it...
             note.observe(this, noteEntity -> {

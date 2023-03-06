@@ -35,8 +35,12 @@ public class NoteActivity extends AppCompatActivity {
         var title = intent.getStringExtra("note_title");
 
         var viewModel = setupViewModel();
-        note = viewModel.getNote(title);
-        
+        try {
+            note = viewModel.getNote(title);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         // Set up the toolbar.
         setupToolbar(title);
 
@@ -75,7 +79,11 @@ public class NoteActivity extends AppCompatActivity {
 
             updatedNote.content = updatedContent;
 
-            viewModel.save(updatedNote);
+            try {
+                viewModel.save(updatedNote);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
     }
 

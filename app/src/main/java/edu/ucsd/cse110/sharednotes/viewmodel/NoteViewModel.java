@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 
 import edu.ucsd.cse110.sharednotes.model.Note;
+import edu.ucsd.cse110.sharednotes.model.NoteDao;
 import edu.ucsd.cse110.sharednotes.model.NoteDatabase;
 import edu.ucsd.cse110.sharednotes.model.NoteRepository;
 
@@ -22,16 +23,14 @@ public class NoteViewModel extends AndroidViewModel {
         this.repo = new NoteRepository(dao);
     }
 
-    public LiveData<Note> getNote(String title) {
+    public LiveData<Note> getNote(String title) throws Exception {
         // TODO: check if a newer version of the note exists on the server.
-        if (note == null) {
-            note = repo.getLocal(title);
-        }
+        note = repo.getSynced(title);
         return note;
     }
 
-    public void save(Note note) {
+    public void save(Note note) throws Exception {
         // TODO: try to upload the note to the server.
-        repo.upsertLocal(note);
+        repo.upsertSynced(note);
     }
 }

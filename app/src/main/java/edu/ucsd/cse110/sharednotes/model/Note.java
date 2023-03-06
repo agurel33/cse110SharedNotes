@@ -3,13 +3,31 @@ package edu.ucsd.cse110.sharednotes.model;
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Ignore;
-import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 import com.google.gson.Gson;
+import com.google.gson.TypeAdapter;
+import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 
-import java.io.InputStreamReader;
+import java.time.Instant;
+
+class TimestampAdapter extends TypeAdapter<Long> {
+    @Override
+    public void write(JsonWriter out, Long value) throws java.io.IOException {
+        var instant = Instant.ofEpochSecond(value);
+        System.out.println(value);
+        out.value(instant.toString());
+    }
+
+    @Override
+    public Long read(JsonReader in) throws java.io.IOException {
+        var instant = Instant.parse(in.nextString());
+        return instant.getEpochSecond();
+    }
+}
 
 @Entity(tableName = "notes")
 public class Note {
@@ -29,6 +47,7 @@ public class Note {
      * Defaults to 0 (Jan 1, 1970), so that if a note already exists remotely, its content is
      * always preferred to a new empty note.
      */
+    @JsonAdapter(TimestampAdapter.class)
     @SerializedName(value = "updated_at", alternate = "updatedAt")
     public long updatedAt = 0;
 
@@ -36,6 +55,14 @@ public class Note {
     public Note(@NonNull String title, @NonNull String content) {
         this.title = title;
         this.content = content;
+        this.updatedAt = 0;
+    }
+
+    @Ignore
+    public Note(@NonNull String title, @NonNull String content, long updatedAt) {
+        this.title = title;
+        this.content = content;
+        this.updatedAt = updatedAt;
     }
 
     public static Note fromJSON(String json) {

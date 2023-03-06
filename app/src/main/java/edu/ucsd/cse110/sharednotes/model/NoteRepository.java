@@ -2,9 +2,25 @@ package edu.ucsd.cse110.sharednotes.model;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
+import com.google.gson.Gson;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.security.Security;
 import java.util.List;
+
+import okhttp3.Headers;
+import okhttp3.MediaType;
+import okhttp3.OkHttp;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class NoteRepository {
     private final NoteDao dao;
@@ -27,7 +43,7 @@ public class NoteRepository {
      * @param title the title of the note
      * @return a LiveData object that will be updated when the note is updated locally or remotely.
      */
-    public LiveData<Note> getSynced(String title) {
+    public LiveData<Note> getSynced(String title) throws Exception {
         var note = new MediatorLiveData<Note>();
 
         Observer<Note> updateFromRemote = theirNote -> {
@@ -45,7 +61,7 @@ public class NoteRepository {
         return note;
     }
 
-    public void upsertSynced(Note note) {
+    public void upsertSynced(Note note) throws Exception {
         upsertLocal(note);
         upsertRemote(note);
     }
@@ -59,7 +75,6 @@ public class NoteRepository {
 
     public LiveData<List<Note>> getAllLocal() {
         return dao.getAll();
-
     }
 
     public void upsertLocal(Note note) {
@@ -78,13 +93,22 @@ public class NoteRepository {
     // Remote Methods
     // ==============
 
-    public LiveData<Note> getRemote(String title) {
-        // TODO: Implement getRemote!
-        throw new UnsupportedOperationException("Not implemented yet");
+    public LiveData<Note> getRemote(String title) throws Exception {
+        NoteAPI api = new NoteAPI();
+        api = api.provide();
+        Note note = api.getNote(title);
+        if(note == null) {
+            return getLocal(title);
+        }
+
+        MutableLiveData<Note> currNote = new MutableLiveData<Note>();
+        currNote.setValue(note);
+        return currNote;
     }
 
-    public void upsertRemote(Note note) {
-        // TODO: Implement upsersRemote!
-        throw new UnsupportedOperationException("Not implemented yet");
+    public void upsertRemote(Note note) throws Exception {
+        NoteAPI api = new NoteAPI();
+        api = api.provide();
+        api.addNote(note);
     }
 }
