@@ -43,7 +43,7 @@ public class ListViewModel extends AndroidViewModel {
     public LiveData<Note> getOrCreateNote(String title) {
         if (!repo.existsLocal(title)) {
             var note = new Note(title, "");
-            repo.upsertLocal(note);
+            repo.upsertLocal(note, false);
         }
 
         return repo.getLocal(title);

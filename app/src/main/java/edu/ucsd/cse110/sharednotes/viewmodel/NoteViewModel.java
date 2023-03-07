@@ -23,9 +23,14 @@ public class NoteViewModel extends AndroidViewModel {
         this.repo = new NoteRepository(dao);
     }
 
-    public LiveData<Note> getNote(String title) throws Exception {
-        // TODO: check if a newer version of the note exists on the server.
-        note = repo.getSynced(title);
+    public LiveData<Note> getNote(String title) {
+        // TODO: use getSynced here instead?
+        // The returned live data should update whenever there is a change in
+        // the database, or when the server returns a newer version of the note.
+        // Polling interval: 3s.
+        if (note == null) {
+            note = repo.getLocal(title);
+        }
         return note;
     }
 

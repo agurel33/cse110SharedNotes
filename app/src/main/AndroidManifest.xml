@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+<<<<<<< HEAD
     <uses-permission android:name="android.permission.INTERNET" />
+=======
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+>>>>>>> 60a75557c074690a148a024f19e94826fbe10a8b
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
