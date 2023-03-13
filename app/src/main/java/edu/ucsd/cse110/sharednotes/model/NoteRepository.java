@@ -2,14 +2,20 @@ package edu.ucsd.cse110.sharednotes.model;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class NoteRepository {
     private final NoteDao dao;
     private ScheduledFuture<?> poller; // what could this be for... hmm?
+    private final ScheduledExecutorService scheduler =
+            Executors.newScheduledThreadPool(1);
 
     public NoteRepository(NoteDao dao) {
         this.dao = dao;
@@ -29,7 +35,7 @@ public class NoteRepository {
      * @param title the title of the note
      * @return a LiveData object that will be updated when the note is updated locally or remotely.
      */
-    public LiveData<Note> getSynced(String title) throws Exception {
+    public LiveData<Note> getSynced(String title) throws InterruptedException {
         var note = new MediatorLiveData<Note>();
 
         Observer<Note> updateFromRemote = theirNote -> {
@@ -48,7 +54,7 @@ public class NoteRepository {
         return note;
     }
 
-    public void upsertSynced(Note note) throws Exception {
+    public void upsertSynced(Note note) throws InterruptedException {
         upsertLocal(note);
         upsertRemote(note);
     }
@@ -86,27 +92,40 @@ public class NoteRepository {
     // Remote Methods
     // ==============
 
-    public LiveData<Note> getRemote(String title) {
-        // TODO: Implement getRemote!
-        // TODO: Set up polling background thread (MutableLiveData?)
-        // TODO: Refer to TimerService from https://github.com/DylanLukes/CSE-110-WI23-Demo5-V2.
-
+    public LiveData<Note> getRemote(String title) throws InterruptedException {
         // Cancel any previous poller if it exists.
-        if (this.poller != null && !this.poller.isCancelled()) {
-            poller.cancel(true);
-        }
+//        if (this.poller != null && !this.poller.isCancelled()) {
+//            poller.cancel(true);
+//        }
 
-        // Set up a background thread that will poll the server every 3 seconds.
+        MutableLiveData<Note> noteData = new MutableLiveData<>();
+        var localNote = dao.get(title).getValue();
 
-        // You may (but don't have to) want to cache the LiveData's for each title, so that
-        // you don't create a new polling thread every time you call getRemote with the same title.
-        // You don't need to worry about killing background threads.
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-        throw new UnsupportedOperationException("Not implemented yet");
+        poller = scheduler.scheduleAtFixedRate(() ->{
+            Note remote = new Note("", "");
+            try {
+                NoteAPI api = new NoteAPI();
+                api = api.provide();
+                remote = api.getNote(title);
+                noteData.postValue(remote);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            if (noteData.getValue() != null && noteData.getValue().version > localNote.version) {
+                upsertLocal(remote, true);
+            }
+        }, 0, 3, TimeUnit.SECONDS);
+        return noteData;
     }
 
-    public void upsertRemote(Note note) {
-        // TODO: Implement upsertRemote!
-        throw new UnsupportedOperationException("Not implemented yet");
+    public void upsertRemote(Note note) throws InterruptedException {
+        NoteAPI api = new NoteAPI();
+        api = api.provide();
+        NoteAPI finalApi = api;
+        Thread t = new Thread(() -> finalApi.addNote(note));
+        t.start();
+        t.join();
     }
 }

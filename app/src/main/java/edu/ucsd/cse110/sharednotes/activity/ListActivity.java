@@ -153,9 +153,10 @@ public class ListActivity extends AppCompatActivity {
             }
 
             // ...wait for the database to finish persisting it...
+            LiveData<Note> finalNote = note;
             note.observe(this, noteEntity -> {
                 // ...stop observing.
-                note.removeObservers(this);
+                finalNote.removeObservers(this);
 
                 // ...and launch NoteActivity with it.
                 var intent = NoteActivity.intentFor(this, noteEntity);

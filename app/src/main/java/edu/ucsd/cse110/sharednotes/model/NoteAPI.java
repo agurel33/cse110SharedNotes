@@ -2,14 +2,9 @@ package edu.ucsd.cse110.sharednotes.model;
 
 import android.util.Log;
 
-import androidx.annotation.AnyThread;
 import androidx.annotation.WorkerThread;
 
-import com.google.gson.Gson;
-
 import java.io.IOException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -40,54 +35,37 @@ public class NoteAPI {
         }
         return instance;
     }
-
-    public void addNote(Note note) throws InterruptedException {
-        Gson gson = new Gson();
-
-        String title2 = note.title.replace(" ", "%20");
-        RequestBody body = RequestBody.create(gson.toJson(note), JSON);
+    @WorkerThread
+    public void addNote(Note note) {
+        RequestBody req_body = RequestBody.create(note.toJSON(), JSON);
+        String title = note.title.replace(" ", "%20");
 
         Request request = new Request.Builder()
-                .url("https://sharednotes.goto.ucsd.edu/notes/" + title2)
-                .put(body)
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + title)
+                .put(req_body)
                 .build();
-
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try (Response response = client.newCall(request).execute()) {
-                    if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }});
-
-        t.start();
-        t.join();
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-
-    public Note getNote(String title) throws IOException, InterruptedException {
-        final String[] fullBody = new String[1];
+    @WorkerThread
+    public Note getNote(String title)  {
         String title2 = title.replace(" ", "%20");
-        Request request = new Request.Builder()
+        String body = null;
+        var request = new Request.Builder()
                 .url("https://sharednotes.goto.ucsd.edu/notes/" + title2)
                 .build();
         //try isn't running, operating on background thread, need completion block? or stop main thread and run on separate thread.
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try (Response response = client.newCall(request).execute()) {
-                    if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-                    fullBody[0] = response.body().string();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }});
-
-        t.start(); // spawn thread
-        t.join();  // wait for thread to finish
-        var note =  Note.fromJSON(fullBody[0]);
-        return note;
+        try (var response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+            body = response.body().string();
+            Log.d("GET", body);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return Note.fromJSON(body);
     }
 
     /**
@@ -98,33 +76,33 @@ public class NoteAPI {
      * This method should can be called on a background thread (Android
      * disallows network requests on the main thread).
      */
-    @WorkerThread
-    public String echo(String msg) {
-        // URLs cannot contain spaces, so we replace them with %20.
-        String encodedMsg = msg.replace(" ", "%20");
-
-        var request = new Request.Builder()
-                .url("https://sharednotes.goto.ucsd.edu/echo/" + encodedMsg)
-                .method("GET", null)
-                .build();
-
-        try (var response = client.newCall(request).execute()) {
-            assert response.body() != null;
-            var body = response.body().string();
-            Log.i("ECHO", body);
-            return body;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    @AnyThread
-    public Future<String> echoAsync(String msg) {
-        var executor = Executors.newSingleThreadExecutor();
-        var future = executor.submit(() -> echo(msg));
-
-        // We can use future.get(1, SECONDS) to wait for the result.
-        return future;
-    }
+//    @WorkerThread
+//    public String echo(String msg) {
+//        // URLs cannot contain spaces, so we replace them with %20.
+//        String encodedMsg = msg.replace(" ", "%20");
+//
+//        var request = new Request.Builder()
+//                .url("https://sharednotes.goto.ucsd.edu/echo/" + encodedMsg)
+//                .method("GET", null)
+//                .build();
+//
+//        try (var response = client.newCall(request).execute()) {
+//            assert response.body() != null;
+//            var body = response.body().string();
+//            Log.i("ECHO", body);
+//            return body;
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return null;
+//        }
+//    }
+//
+//    @AnyThread
+//    public Future<String> echoAsync(String msg) {
+//        var executor = Executors.newSingleThreadExecutor();
+//        var future = executor.submit(() -> echo(msg));
+//
+//        // We can use future.get(1, SECONDS) to wait for the result.
+//        return future;
+//    }
 }
